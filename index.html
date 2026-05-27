@@ -3,102 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上神祕學：塔羅占卜</title>
+    <title>線上神祕學：78張完整塔羅占卜</title>
     <style>
         :root {
-            --bg-color: #0f0c1b;
-            --card-back: linear-gradient(135deg, #1a103c 0%, #2b1055 50%, #591a75 100%);
-            --card-front: #fff;
+            --bg-color: #0d1117;
+            --card-back: radial-gradient(circle at center, #2b1055 0%, #0d061f 100%);
+            --card-front: #f4f1ea;
             --gold: #dfb76c;
         }
 
         body {
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background-color: var(--bg-color);
             color: #fff;
             font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            overflow-x: hidden;
+            height: 100vh;
+        }
+
+        .header {
+            text-align: center;
+            z-index: 200;
+            padding: 20px 0 10px 0;
         }
 
         h1 {
             color: var(--gold);
             text-shadow: 0 0 10px rgba(223, 183, 108, 0.5);
-            margin-bottom: 10px;
+            margin: 0 0 10px 0;
         }
 
         .status-msg {
             font-size: 1.1rem;
             color: #ccc;
-            margin-bottom: 20px;
             height: 24px;
+            margin-bottom: 15px;
         }
 
-        /* 按鈕區 */
         .controls {
             display: flex;
             gap: 15px;
-            margin-bottom: 30px;
+            justify-content: center;
         }
 
         button {
             background: transparent;
-            border: 2px solid var(--gold);
+            border: 1px solid var(--gold);
             color: var(--gold);
-            padding: 10px 20px;
+            padding: 8px 16px;
             font-size: 1rem;
             cursor: pointer;
             border-radius: 5px;
-            transition: all 0.3s ease;
-            box-shadow: 0 0 5px rgba(223, 183, 108, 0.2);
+            transition: all 0.3s;
         }
 
         button:hover:not(:disabled) {
             background: var(--gold);
             color: var(--bg-color);
-            box-shadow: 0 0 15px rgba(223, 183, 108, 0.6);
         }
 
         button:disabled {
-            border-color: #555;
+            border-color: #444;
             color: #555;
             cursor: not-allowed;
         }
 
-        /* 牌陣與牌的樣式 */
-        .deck-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 15px;
-            max-width: 1000px;
-            margin-bottom: 40px;
-            perspective: 1000px; /* 3D 效果 */
+        /* 桌面區 - 用於牌的絕對定位 */
+        .table-area {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            flex-grow: 1;
+            perspective: 1200px;
         }
 
         .card {
-            width: 100px;
-            height: 170px;
-            position: relative;
+            width: 50px;
+            height: 85px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) rotate(0deg);
             transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s;
+            /* 動畫過渡：包含位移與旋轉 */
+            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), left 0.6s ease, top 0.6s ease, opacity 0.5s;
             cursor: pointer;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            z-index: 1;
         }
 
-        /* 洗牌時的晃動動畫 */
-        @keyframes shuffle-anim {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(20px, 10px) rotate(5deg); }
-            50% { transform: translate(-20px, -10px) rotate(-5deg); }
-            75% { transform: translate(15px, -5px) rotate(3deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
-        }
-
-        .shuffling {
-            animation: shuffle-anim 0.4s ease-in-out infinite;
+        /* 懸停時的浮出效果 (僅在特定狀態下啟用) */
+        .card.hoverable:hover {
+            /* 利用 CSS 變數維持原本的旋轉角度，並將 Y 軸上移 */
+            transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateY(-30px) !important;
+            z-index: 100 !important;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.8);
         }
 
         .card-face {
@@ -106,8 +110,8 @@
             width: 100%;
             height: 100%;
             backface-visibility: hidden;
-            border-radius: 8px;
-            border: 2px solid var(--gold);
+            border-radius: 4px;
+            border: 1px solid var(--gold);
             box-sizing: border-box;
             display: flex;
             flex-direction: column;
@@ -115,243 +119,355 @@
             justify-content: center;
         }
 
-        /* 背面樣式 */
         .card-back {
             background: var(--card-back);
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
         }
-        /* 背面的神祕學小圖案 */
+        
         .card-back::after {
-            content: "✨";
-            font-size: 1.5rem;
+            content: "✧";
             color: var(--gold);
+            font-size: 1.2rem;
+            opacity: 0.7;
         }
 
-        /* 正面樣式 */
         .card-front {
             background: var(--card-front);
             color: #111;
             transform: rotateY(180deg);
-            padding: 10px;
+            padding: 2px;
             text-align: center;
         }
 
         .card.flipped {
-            transform: rotateY(180deg);
+            /* 翻牌時，維持在原本的位子，但放大並顯示在最上層 */
+            transform: translate(-50%, -50%) rotate(0deg) scale(2.5) translateY(20px) !important;
+            z-index: 300 !important;
         }
 
-        /* 逆位翻轉 */
         .card.reversed .card-front-content {
             transform: rotate(180deg);
         }
 
         .card-front h3 {
-            margin: 5px 0;
-            font-size: 0.9rem;
+            margin: 0;
+            font-size: 0.55rem;
             color: #2b1055;
+            line-height: 1.2;
         }
 
-        .card-front .orientation {
+        .card-front .suit-icon {
             font-size: 0.8rem;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 3px;
-            margin-top: 10px;
+            margin-bottom: 2px;
         }
-
-        .orientation.upright { background: #d4edda; color: #155724; }
-        .orientation.reversed-text { background: #f8d7da; color: #721c24; }
 
         /* 結果顯示區 */
-        .result-panel {
+        .result-overlay {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(13, 6, 31, 0.95);
+            border-top: 2px solid var(--gold);
+            padding: 20px;
+            box-sizing: border-box;
             text-align: center;
-            max-width: 600px;
-            border-top: 1px solid #333;
-            padding-top: 20px;
-            display: none;
+            transform: translateY(100%);
+            transition: transform 0.5s ease-out;
+            z-index: 400;
         }
 
-        .result-panel h2 {
-            color: var(--gold);
+        .result-overlay.show {
+            transform: translateY(0);
+        }
+
+        .result-overlay h2 { margin-top: 0; color: var(--gold); }
+        .result-text { font-size: 1.2rem; margin-bottom: 15px; }
+
+        @media (min-width: 768px) {
+            .card { width: 70px; height: 120px; }
+            .card-back::after { font-size: 2rem; }
+            .card-front h3 { font-size: 0.8rem; }
+            .card-front .suit-icon { font-size: 1.5rem; }
         }
     </style>
 </head>
 <body>
 
-    <h1>✨ 命運塔羅占卜 ✨</h1>
-    <div class="status-msg" id="statusMsg">請先點擊「洗牌」來集中您的精神...</div>
-
-    <div class="controls">
-        <button id="btnShuffle" onclick="shuffleDeck()">1. 洗牌</button>
-        <button id="btnCut" onclick="cutDeck()" disabled>2. 切牌</button>
-        <button id="btnFan" onclick="fanCards()" disabled>3. 攤牌</button>
+    <div class="header">
+        <h1>✨ 78張完整塔羅占卜 ✨</h1>
+        <div class="status-msg" id="statusMsg">第一步：請點擊「搓洗牌」將牌陣打亂。</div>
+        <div class="controls">
+            <button id="btnWash" onclick="washCards()">1. 搓洗牌</button>
+            <button id="btnCut" onclick="prepareCut()" disabled>2. 切牌</button>
+            <button id="btnFan" onclick="fanCards()" disabled>3. 扇形攤牌</button>
+        </div>
     </div>
 
-    <div class="deck-container" id="deckContainer"></div>
+    <div class="table-area" id="tableArea"></div>
 
-    <div class="result-panel" id="resultPanel">
+    <div class="result-overlay" id="resultOverlay">
         <h2>占卜結果</h2>
-        <div id="resultText" style="font-size: 1.2rem; line-height: 1.6;"></div>
+        <div class="result-text" id="resultText"></div>
+        <button onclick="window.location.reload()">重新占卜</button>
     </div>
 
     <script>
-        // 22張大阿爾克那牌組資料
-        const tarotData = [
-            { id: 0, name: "愚者 (The Fool)" },
-            { id: 1, name: "魔術師 (The Magician)" },
-            { id: 2, name: "女祭司 (The High Priestess)" },
-            { id: 3, name: "女皇 (The Empress)" },
-            { id: 4, name: "皇帝 (The Emperor)" },
-            { id: 5, name: "教皇 (The Hierophant)" },
-            { id: 6, name: "戀人 (The Lovers)" },
-            { id: 7, name: "戰車 (The Chariot)" },
-            { id: 8, name: "力量 (Strength)" },
-            { id: 9, name: "隱士 (The Hermit)" },
-            { id: 10, name: "命運之輪 (Wheel of Fortune)" },
-            { id: 11, name: "正義 (Justice)" },
-            { id: 12, name: "倒吊人 (The Hanged Man)" },
-            { id: 13, name: "死神 (Death)" },
-            { id: 14, name: "節制 (Temperance)" },
-            { id: 15, name: "惡魔 (The Devil)" },
-            { id: 16, name: "高塔 (The Tower)" },
-            { id: 17, name: "星星 (The Star)" },
-            { id: 18, name: "月亮 (The Moon)" },
-            { id: 19, name: "太陽 (The Sun)" },
-            { id: 20, name: "審判 (Judgement)" },
-            { id: 21, name: "世界 (The World)" }
+        // 建立 78 張塔羅牌資料
+        const majorArcana = [
+            "愚者", "魔術師", "女祭司", "女皇", "皇帝", "教皇", "戀人", 
+            "戰車", "力量", "隱士", "命運之輪", "正義", "倒吊人", "死神", 
+            "節制", "惡魔", "高塔", "星星", "月亮", "太陽", "審判", "世界"
         ];
+        
+        const suits = [
+            { name: "權杖", icon: "🔥" }, 
+            { name: "聖杯", icon: "💧" }, 
+            { name: "寶劍", icon: "⚔️" }, 
+            { name: "錢幣", icon: "🪙" }
+        ];
+        const minorValues = ["王牌", "二", "三", "四", "五", "六", "七", "八", "九", "十", "侍者", "騎士", "王后", "國王"];
 
+        let tarotData = [];
+        
+        // 組合大阿爾克那
+        majorArcana.forEach((name, i) => {
+            tarotData.push({ id: `major-${i}`, name: name, icon: "🔮" });
+        });
+        
+        // 組合小阿爾克那
+        suits.forEach(suit => {
+            minorValues.forEach((val, i) => {
+                tarotData.push({ id: `minor-${suit.name}-${i}`, name: `${suit.name}${val}`, icon: suit.icon });
+            });
+        });
+
+        // 系統變數
         let deck = [];
-        let hasShuffled = false;
-        let hasCut = false;
-        let isFanned = false;
-        let hasSelected = false;
-
+        let state = 'init'; // init, washing, cut-ready, fanned, finished
+        const tableArea = document.getElementById('tableArea');
         const statusMsg = document.getElementById('statusMsg');
-        const deckContainer = document.getElementById('deckContainer');
-        const resultPanel = document.getElementById('resultPanel');
-        const resultText = document.getElementById('resultText');
 
-        // 初始化：預先放好牌背
+        // 初始化：在桌面上產生 78 張牌，整齊疊在一起
         function init() {
-            deck = tarotData.map(card => ({ ...card, isReversed: false }));
-            renderPlaceholderDeck();
-        }
-
-        function renderPlaceholderDeck() {
-            deckContainer.innerHTML = '';
-            for(let i=0; i<22; i++) {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = 'card';
-                cardDiv.innerHTML = `<div class="card-face card-back"></div>`;
-                deckContainer.appendChild(cardDiv);
-            }
-        }
-
-        // 1. 洗牌功能 (Fisher-Yates Shuffle)
-        function shuffleDeck() {
-            statusMsg.innerText = "正在洗牌中，傾聽內心的聲音...";
-            const cards = document.querySelectorAll('.card');
-            cards.forEach(c => c.classList.add('shuffling'));
-
-            setTimeout(() => {
-                for (let i = deck.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [deck[i], deck[j]] = [deck[j], deck[i]];
-                }
-                // 同時隨機決定每張牌的正逆位
-                deck.forEach(card => {
-                    card.isReversed = Math.random() > 0.5;
-                });
-
-                cards.forEach(c => c.classList.remove('shuffling'));
-                statusMsg.innerText = "洗牌完畢！請點擊「切牌」來重整能量。";
-                document.getElementById('btnShuffle').disabled = true;
-                document.getElementById('btnCut').disabled = false;
-            }, 1200); // 模擬洗牌動效時間
-        }
-
-        // 2. 切牌功能 (隨機切成兩半並交換)
-        function cutDeck() {
-            const cutIndex = Math.floor(Math.random() * 12) + 5; // 隨機在 5~17 張牌之間切牌
-            const topHalf = deck.slice(0, cutIndex);
-            const bottomHalf = deck.slice(cutIndex);
-            deck = bottomHalf.concat(topHalf); // 交換位置
-
-            statusMsg.innerText = `已在第 ${cutIndex} 張處切牌！請點擊「攤牌」將牌陣展開。`;
-            document.getElementById('btnCut').disabled = true;
-            document.getElementById('btnFan').disabled = false;
-        }
-
-        // 3. 攤牌功能 (渲染可點選的牌陣)
-        function fanCards() {
-            deckContainer.innerHTML = '';
+            tableArea.innerHTML = '';
+            deck = tarotData.map(card => ({ ...card, isReversed: false, element: null }));
+            
             deck.forEach((card, index) => {
                 const cardDiv = document.createElement('div');
                 cardDiv.className = 'card';
-                if (card.isReversed) {
-                    cardDiv.classList.add('reversed');
-                }
-                cardDiv.setAttribute('data-index', index);
-                cardDiv.onclick = () => selectCard(index, cardDiv);
-
                 cardDiv.innerHTML = `
                     <div class="card-face card-back"></div>
                     <div class="card-face card-front">
                         <div class="card-front-content">
-                            <div style="font-size:1.5rem; margin-bottom:5px;">🔮</div>
+                            <div class="suit-icon">${card.icon}</div>
                             <h3>${card.name}</h3>
-                            <span class="orientation ${card.isReversed ? 'reversed-text' : 'upright'}">
-                                ${card.isReversed ? '逆位' : '正位'}
-                            </span>
                         </div>
                     </div>
                 `;
-                deckContainer.appendChild(cardDiv);
+                
+                // 初始狀態：全部疊在畫面中央
+                cardDiv.style.left = '50%';
+                cardDiv.style.top = '50%';
+                cardDiv.style.zIndex = index;
+                
+                cardDiv.onclick = () => handleCardClick(index);
+                card.element = cardDiv;
+                tableArea.appendChild(cardDiv);
             });
-
-            statusMsg.innerText = "冥想你的問題，並用直覺點選其中一張牌。";
-            document.getElementById('btnFan').disabled = true;
-            isFanned = true;
         }
 
-        // 4. 點選抽牌
-        function selectCard(selectedIndex, cardElement) {
-            if (!isFanned || hasSelected) return;
-            hasSelected = true;
+        // 1. 搓洗牌 (模擬雙手在桌面上把牌洗亂)
+        function washCards() {
+            if (state !== 'init') return;
+            state = 'washing';
+            statusMsg.innerText = "正在桌面上搓洗牌組，請集中精神...";
+            document.getElementById('btnWash').disabled = true;
 
-            // 翻開點選的牌
-            cardElement.classList.add('flipped');
-            const selectedCard = deck[selectedIndex];
+            let washCount = 0;
+            const washInterval = setInterval(() => {
+                deck.forEach(card => {
+                    // 讓牌在桌面隨機散開並旋轉
+                    const randLeft = 20 + Math.random() * 60; // 20% ~ 80%
+                    const randTop = 20 + Math.random() * 60;
+                    const randRot = Math.random() * 360;
+                    
+                    card.element.style.left = `${randLeft}%`;
+                    card.element.style.top = `${randTop}%`;
+                    card.element.style.transform = `translate(-50%, -50%) rotate(${randRot}deg)`;
+                    card.element.style.transition = 'transform 0.4s ease, left 0.4s ease, top 0.4s ease';
+                    card.element.style.zIndex = Math.floor(Math.random() * 78);
+                });
+                washCount++;
+                
+                // 洗 5 次後停止
+                if (washCount >= 5) {
+                    clearInterval(washInterval);
+                    setTimeout(gatherCardsForCut, 600);
+                }
+            }, 500);
 
-            // 讓其他牌變透明，凸顯抽中的牌
-            const allCards = document.querySelectorAll('.card');
-            allCards.forEach((c, idx) => {
-                if (idx !== selectedIndex) {
-                    c.style.opacity = '0.3';
-                    c.style.pointerEvents = 'none';
+            // 順便把陣列打亂，並決定正逆位
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            deck.forEach(card => {
+                card.isReversed = Math.random() > 0.5;
+                if(card.isReversed) card.element.classList.add('reversed');
+                else card.element.classList.remove('reversed');
+            });
+        }
+
+        // 洗完牌後，將牌整理成階梯狀的一疊，準備切牌
+        function gatherCardsForCut() {
+            deck.forEach((card, index) => {
+                // 更新陣列順序的 z-index
+                card.element.style.zIndex = index;
+                // 排列成一長條，讓使用者可以點選
+                // 78張牌，每張水平偏移 3px
+                const offset = (index - 39) * 4; 
+                card.element.style.left = `calc(50% + ${offset}px)`;
+                card.element.style.top = '50%';
+                card.element.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+                card.element.style.transition = 'transform 0.6s, left 0.6s, top 0.6s';
+                
+                // 加入可懸停效果
+                card.element.style.setProperty('--angle', '0deg');
+                card.element.classList.add('hoverable');
+            });
+            
+            state = 'cut-ready';
+            statusMsg.innerText = "洗牌完畢！請在牌疊上點選任意位置來切牌。";
+            document.getElementById('btnCut').disabled = false;
+        }
+
+        // 讓按鈕也可以觸發隨機切牌，或由使用者點選牌疊
+        function prepareCut() {
+            if (state !== 'cut-ready') return;
+            // 如果使用者直接點按鈕，就隨機切
+            executeCut(Math.floor(Math.random() * 60) + 10);
+        }
+
+        // 執行切牌動畫與陣列重組
+        function executeCut(cutIndex) {
+            state = 'cutting';
+            document.getElementById('btnCut').disabled = true;
+            statusMsg.innerText = `從第 ${cutIndex + 1} 張切牌中...`;
+
+            // 動畫：上半部的牌往上提，下半部的牌往下移
+            deck.forEach((card, i) => {
+                card.element.classList.remove('hoverable');
+                if (i >= cutIndex) { // 上半部 (視覺上的右邊/上方)
+                    card.element.style.top = '35%';
+                } else {
+                    card.element.style.top = '65%';
                 }
             });
 
-            statusMsg.innerText = "占卜完成。";
-            
-            // 顯示結果
             setTimeout(() => {
-                resultPanel.style.display = 'block';
-                const orientationText = selectedCard.isReversed ? '逆位' : '正位';
-                resultText.innerHTML = `
-                    您抽到了：<strong>${selectedCard.name}（${orientationText}）</strong><br><br>
-                    <span style="color:#aaa; font-size:1rem;">
-                        (提示：正位通常代表該牌組的原始能量正常發揮；逆位則可能代表能量過度、不足或有內在的阻礙。請依據您當前的問題進行直覺聯想。)
-                    </span>
-                    <br><br>
-                    <button onclick="window.location.reload()">重新占卜</button>
-                `;
-                resultPanel.scrollIntoView({ behavior: 'smooth' });
+                // 陣列切割與合併
+                const topHalf = deck.slice(cutIndex);
+                const bottomHalf = deck.slice(0, cutIndex);
+                deck = topHalf.concat(bottomHalf);
+
+                // 重新疊合為一疊
+                deck.forEach((card, i) => {
+                    card.element.style.zIndex = i;
+                    card.element.style.left = '50%';
+                    card.element.style.top = '50%';
+                    // 稍微給一點錯位感，看起來像一疊真實的牌
+                    card.element.style.transform = `translate(calc(-50% - ${i*0.2}px), calc(-50% - ${i*0.2}px)) rotate(0deg)`;
+                });
+
+                statusMsg.innerText = "切牌完成，請點擊「扇形攤牌」。";
+                document.getElementById('btnFan').disabled = false;
+                state = 'fanned-ready';
             }, 600);
         }
 
-        // 啟動
+        // 3. 扇形攤開
+        function fanCards() {
+            if (state !== 'fanned-ready') return;
+            state = 'fanned';
+            document.getElementById('btnFan').disabled = true;
+            statusMsg.innerText = "請靜下心，將滑鼠移至牌面上，用直覺挑選屬於您的一張牌。";
+
+            // 設定扇形攤牌的核心參數
+            const totalCards = deck.length;
+            const startAngle = -85; // 從左邊 -85度開始
+            const endAngle = 85;    // 到右邊 85度結束
+            const angleStep = (endAngle - startAngle) / (totalCards - 1);
+            const radius = window.innerWidth > 768 ? 400 : 250; // 旋轉圓心距離(半徑)
+
+            deck.forEach((card, index) => {
+                const angle = startAngle + (index * angleStep);
+                
+                // 設定 transform-origin 在牌的下方遠處，製造圓弧效果
+                card.element.style.transformOrigin = `50% ${radius}px`;
+                // 將牌往上移，配合圓心
+                card.element.style.top = window.innerWidth > 768 ? '20%' : '15%'; 
+                card.element.style.left = '50%';
+                
+                // 寫入 CSS 變數供 hover 效果使用
+                card.element.style.setProperty('--angle', `${angle}deg`);
+                card.element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+                
+                card.element.style.zIndex = index;
+                // 恢復游標懸停浮出效果
+                card.element.classList.add('hoverable');
+            });
+        }
+
+        // 處理牌面的點擊事件 (包含手動切牌與抽牌)
+        function handleCardClick(clickedIndex) {
+            // 找出點擊的 DOM 對應在目前 deck 陣列中的索引
+            const currentDeckIndex = deck.findIndex(c => tarotData.findIndex(td => td.id === c.id) === clickedIndex);
+
+            if (state === 'cut-ready') {
+                // 手動切牌
+                executeCut(currentDeckIndex);
+            } else if (state === 'fanned') {
+                // 扇形攤牌中的抽牌
+                pickCard(currentDeckIndex);
+            }
+        }
+
+        // 抽牌動畫與結果
+        function pickCard(index) {
+            state = 'finished';
+            const selectedCard = deck[index];
+
+            // 拔除所有牌的 hover 效果，並讓沒抽中的牌變暗
+            deck.forEach((card, i) => {
+                card.element.classList.remove('hoverable');
+                if (i !== index) {
+                    card.element.style.opacity = '0.3';
+                    card.element.style.pointerEvents = 'none';
+                }
+            });
+
+            // 抽中的牌：取消 transform-origin 的圓弧設定，移到畫面中央並翻轉
+            selectedCard.element.style.transformOrigin = 'center center';
+            selectedCard.element.style.top = '40%';
+            selectedCard.element.style.left = '50%';
+            selectedCard.element.classList.add('flipped');
+            
+            statusMsg.innerText = "占卜完成，命運的啟示已浮現。";
+
+            // 顯示結果面板
+            setTimeout(() => {
+                const orientation = selectedCard.isReversed ? '逆位' : '正位';
+                const color = selectedCard.isReversed ? '#ff6b6b' : '#51cf66';
+                
+                document.getElementById('resultText').innerHTML = `
+                    您抽到了：<strong>${selectedCard.name}</strong> <br>
+                    狀態：<span style="color: ${color}; font-weight: bold;">${orientation}</span>
+                `;
+                document.getElementById('resultOverlay').classList.add('show');
+            }, 800);
+        }
+
+        // 執行初始化
         init();
     </script>
 </body>
