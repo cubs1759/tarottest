@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神祕學占卜：78張極致儀式感塔羅</title>
+    <title>神祕學占卜：高自訂互動塔羅</title>
     <style>
         :root {
             --bg-color: #0a0c10;
@@ -25,6 +25,43 @@
             overflow: hidden;
             height: 100vh;
             user-select: none;
+        }
+
+        /* 初始設定面板 */
+        .setup-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 12, 16, 0.95);
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .setup-box {
+            background: #111;
+            border: 2px solid var(--gold);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px var(--gold-glow);
+            text-align: center;
+            max-width: 400px;
+            width: 80%;
+        }
+        .setup-box h2 { margin-top: 0; color: var(--gold); }
+        .setup-item {
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1.1rem;
+        }
+        .setup-item input[type="number"] {
+            width: 60px; padding: 5px; font-size: 1rem; text-align: center;
+            background: #222; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px;
+        }
+        .setup-item input[type="checkbox"] {
+            width: 20px; height: 20px; accent-color: var(--gold);
         }
 
         .header {
@@ -50,496 +87,82 @@
             text-shadow: 0 0 5px rgba(255,255,255,0.3);
         }
 
-        /* 進度條樣式 */
         .progress-container {
-            width: 250px;
-            height: 6px;
-            background: #222;
-            border-radius: 3px;
-            margin: 5px auto;
-            overflow: hidden;
-            border: 1px solid #444;
-            display: none;
+            width: 250px; height: 6px; background: #222; border-radius: 3px;
+            margin: 5px auto; overflow: hidden; border: 1px solid #444; display: none;
         }
         .progress-bar {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #b8860b, var(--gold));
-            box-shadow: 0 0 8px var(--gold);
-            transition: width 0.1s ease;
+            width: 0%; height: 100%; background: linear-gradient(90deg, #b8860b, var(--gold));
+            box-shadow: 0 0 8px var(--gold); transition: width 0.1s ease;
         }
 
-        /* 桌面區 */
         .table-area {
-            position: relative;
-            width: 100%;
-            flex-grow: 1;
-            perspective: 1400px;
-            touch-action: none; /* 防止手機瀏覽器拖曳卡頓 */
+            position: relative; width: 100%; flex-grow: 1;
+            perspective: 1400px; touch-action: none;
         }
 
-        /* 牌的基礎樣式 */
         .card {
-            width: 55px;
-            height: 95px;
-            position: absolute;
-            left: 50%;
-            top: 50%;
+            width: 55px; height: 95px;
+            position: absolute; left: 50%; top: 50%;
             transform: translate(-50%, -50%);
             transform-style: preserve-3d;
-            transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1), left 0.6s cubic-bezier(0.25, 1, 0.5, 1), top 0.6s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s;
-            cursor: pointer;
-            border-radius: 5px;
+            transition: transform 0.6s ease, left 0.6s ease, top 0.6s ease, opacity 0.4s;
+            cursor: pointer; border-radius: 5px;
         }
 
-        /* 讓洗牌時更滑順，移除過渡動畫 */
         .card.fast-move {
             transition: transform 0.1s ease, left 0.1s ease, top 0.1s ease !important;
         }
 
-        /* 扇形攤牌時的懸停浮出 */
         .card.hoverable:hover {
             transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateY(-35px) scale(1.05) !important;
-            z-index: 500 !important;
+            z-index: 1000 !important;
+        }
+
+        /* 標記牌疊選擇時的 hover 效果 */
+        .card.pile-hoverable:hover {
+            filter: brightness(1.3);
+            box-shadow: 0 0 10px var(--gold);
         }
 
         .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            border-radius: 5px;
-            border: 1px solid var(--gold);
-            box-sizing: border-box;
+            position: absolute; width: 100%; height: 100%;
+            backface-visibility: hidden; border-radius: 5px;
+            border: 1px solid var(--gold); box-sizing: border-box;
             box-shadow: 0 2px 6px rgba(0,0,0,0.6);
         }
 
         .card-back {
-            background: var(--card-back);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: var(--card-back); display: flex; align-items: center; justify-content: center;
         }
-        .card-back::after {
-            content: "✦";
-            color: var(--gold);
-            font-size: 1.2rem;
-            opacity: 0.6;
-        }
+        .card-back::after { content: "✦"; color: var(--gold); font-size: 1.2rem; opacity: 0.6; }
 
         .card-front {
-            background: var(--card-front);
-            color: #111;
-            transform: rotateY(180deg);
-            padding: 4px;
-            text-align: center;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: var(--card-front); color: #111;
+            transform: rotateY(180deg); padding: 4px; text-align: center;
+            display: flex; align-items: center; justify-content: center;
         }
 
         .card.flipped {
-            transform: translate(-50%, -50%) rotate(0deg) scale(2.6) translateY(-10px) !important;
+            transform: translate(-50%, -50%) rotate(0deg) scale(2.2) translateY(-10px) !important;
             z-index: 999 !important;
         }
+        .card.reversed .card-front-content { transform: rotate(180deg); }
 
-        .card.reversed .card-front-content {
-            transform: rotate(180deg);
-        }
-
-        .card-front h3 {
-            margin: 0;
-            font-size: 0.6rem;
-            color: #1a0933;
-            word-break: break-all;
-        }
-        .card-front .suit-icon {
-            font-size: 1.1rem;
-            margin-bottom: 4px;
-        }
-
-        /* 三疊點選的點擊遮罩與標籤 */
-        .pile-trigger {
-            position: absolute;
-            top: 40%;
-            width: 120px;
-            height: 160px;
-            transform: translate(-50%, -50%);
-            border: 2px dashed rgba(223, 183, 108, 0.2);
-            border-radius: 8px;
-            display: none;
-            cursor: pointer;
-            z-index: 600;
-            transition: all 0.3s;
-        }
-        .pile-trigger:hover {
-            border-color: var(--gold);
-            background: rgba(223, 183, 108, 0.05);
-            box-shadow: 0 0 15px var(--gold-glow);
-        }
-        .pile-label {
-            position: absolute;
-            bottom: -30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            padding: 2px 10px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            color: var(--gold);
-            border: 1px solid var(--gold);
-            white-space: nowrap;
-        }
+        .card-front h3 { margin: 0; font-size: 0.6rem; color: #1a0933; word-break: break-all; }
+        .card-front .suit-icon { font-size: 1.1rem; margin-bottom: 4px; }
 
         /* 結果顯示 */
         .result-overlay {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(8, 4, 18, 0.98);
-            border-top: 2px solid var(--gold);
-            padding: 20px;
-            box-sizing: border-box;
-            text-align: center;
-            transform: translateY(100%);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            z-index: 1000;
+            position: fixed; bottom: 0; left: 0; width: 100%;
+            background: rgba(8, 4, 18, 0.98); border-top: 2px solid var(--gold);
+            padding: 20px; box-sizing: border-box; text-align: center;
+            transform: translateY(100%); transition: transform 0.5s ease-in-out;
+            z-index: 1000; max-height: 50vh; overflow-y: auto;
         }
         .result-overlay.show { transform: translateY(0); }
-        .result-text { font-size: 1.3rem; margin-bottom: 15px; }
+        .result-text { font-size: 1.1rem; margin-bottom: 15px; text-align: left; max-width: 600px; margin: 0 auto 15px auto; line-height: 1.5; }
+        .result-item { border-bottom: 1px dashed #444; padding: 10px 0; }
         
         button {
-            background: transparent;
-            border: 1px solid var(--gold);
-            color: var(--gold);
-            padding: 8px 20px;
-            font-size: 1rem;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.3s;
-        }
-        button:hover { background: var(--gold); color: var(--bg-color); }
-
-        @media (min-width: 768px) {
-            .card { width: 75px; height: 130px; }
-            .card-back::after { font-size: 2rem; }
-            .card-front h3 { font-size: 0.8rem; }
-            .card-front .suit-icon { font-size: 1.6rem; }
-            .pile-trigger { width: 150px; height: 200px; }
-        }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <h1>✨ 命運與直覺：78張互動占卜 ✨</h1>
-        <div class="status-msg" id="statusMsg">請在桌面上按住滑鼠或用手指「瘋狂搓洗牌組」來打亂能量。</div>
-        <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
-    </div>
-
-    <div class="table-area" id="tableArea"></div>
-
-    <div id="pileLeft" class="pile-trigger" style="left: 22%;" onclick="choosePile(0)">
-        <div class="pile-label" id="labelLeft">第一疊</div>
-    </div>
-    <div id="pileCenter" class="pile-trigger" style="left: 50%;" onclick="choosePile(1)">
-        <div class="pile-label" id="labelCenter">第二疊</div>
-    </div>
-    <div id="pileRight" class="pile-trigger" style="left: 78%;" onclick="choosePile(2)">
-        <div class="pile-label" id="labelRight">第三疊</div>
-    </div>
-
-    <div class="result-overlay" id="resultOverlay">
-        <h2>占卜結果</h2>
-        <div class="result-text" id="resultText"></div>
-        <button onclick="window.location.reload()">重新占卜</button>
-    </div>
-
-    <script>
-        // 建立完整 78 張塔羅牌資料
-        const majorArcana = ["愚者", "魔術師", "女祭司", "女皇", "皇帝", "教皇", "戀人", "戰車", "力量", "隱士", "命運之輪", "正義", "倒吊人", "死神", "節制", "惡魔", "高塔", "星星", "月亮", "太陽", "審判", "世界"];
-        const suits = [{ name: "權杖", icon: "🔥" }, { name: "聖杯", icon: "💧" }, { name: "寶劍", icon: "⚔️" }, { name: "錢幣", icon: "🪙" }];
-        const minorValues = ["王牌", "二", "三", "四", "五", "六", "七", "八", "九", "十", "侍者", "騎士", "王后", "國王"];
-        let tarotData = [];
-        majorArcana.forEach((name, i) => tarotData.push({ id: `maj-${i}`, name: name, icon: "🔮" }));
-        suits.forEach(s => minorValues.forEach((v, i) => tarotData.push({ id: `min-${s.name}-${i}`, name: `${s.name}${v}`, icon: s.icon })));
-
-        let deck = [];
-        let state = 'init'; // init, washing, washed, splitting, picking-piles, combining, fanned, finished
-        let isWashingActive = false;
-        let washProgress = 0;
-        
-        // 分三疊儲存庫
-        let piles = [[], [], []];
-        let chosenPilesOrder = []; 
-
-        const tableArea = document.getElementById('tableArea');
-        const statusMsg = document.getElementById('statusMsg');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-
-        function init() {
-            tableArea.innerHTML = '';
-            deck = tarotData.map(card => ({ ...card, isReversed: false, element: null }));
-            
-            deck.forEach((card, index) => {
-                const cardDiv = document.createElement('div');
-                cardDiv.className = 'card';
-                cardDiv.innerHTML = `
-                    <div class="card-face card-back"></div>
-                    <div class="card-face card-front">
-                        <div class="card-front-content">
-                            <div class="suit-icon">${card.icon}</div>
-                            <h3>${card.name}</h3>
-                        </div>
-                    </div>
-                `;
-                // 初始集中堆疊
-                setCardStackPos(cardDiv, 50, 45, index);
-                card.element = cardDiv;
-                tableArea.appendChild(cardDiv);
-            });
-
-            // 綁定手動搓牌事件
-            tableArea.addEventListener('mousedown', startWashHand);
-            window.addEventListener('mousemove', moveWashHand);
-            window.addEventListener('mouseup', endWashHand);
-            tableArea.addEventListener('touchstart', startWashHand);
-            window.addEventListener('touchmove', moveWashHand);
-            window.addEventListener('touchend', endWashHand);
-            
-            progressContainer.style.display = 'block';
-            state = 'washing';
-        }
-
-        // 輔助函式：設定完美3D厚度堆疊位置 (利用 translate 的微型錯位)
-        function setCardStackPos(el, leftPercent, topPercent, stackIndex, rotation = 0) {
-            const offsetX = stackIndex * 0.4; // 每一張精準錯位 0.4px，堆疊出厚度
-            const offsetY = stackIndex * 0.4;
-            el.style.left = `${leftPercent}%`;
-            el.style.top = `${topPercent}%`;
-            el.style.transform = `translate(calc(-50% - ${offsetX}px), calc(-50% - ${offsetY}px)) rotate(${rotation}deg)`;
-            el.style.zIndex = stackIndex;
-        }
-
-        // --- 1. 手動搓牌邏輯 ---
-        function startWashHand(e) {
-            if (state !== 'washing') return;
-            isWashingActive = true;
-        }
-
-        function moveWashHand(e) {
-            if (!isWashingActive || state !== 'washing') return;
-            
-            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            if (!clientX || !clientY) return;
-
-            const rect = tableArea.getBoundingClientRect();
-            const pX = ((clientX - rect.left) / rect.width) * 100;
-            const pY = ((clientY - rect.top) / rect.height) * 100;
-
-            // 每次滑動，隨機抽10張牌往游標附近搓散
-            for(let i=0; i<10; i++) {
-                const randIndex = Math.floor(Math.random() * 78);
-                const card = deck[randIndex];
-                card.element.classList.add('fast-move');
-                
-                // 圍繞滑鼠隨機發散
-                const targetX = pX + (Math.random() * 34 - 17);
-                const targetY = pY + (Math.random() * 34 - 17);
-                const targetRot = Math.random() * 360;
-
-                card.element.style.left = `${Math.max(8, Math.min(92, targetX))}%`;
-                card.element.style.top = `${Math.max(12, Math.min(88, targetY))}%`;
-                card.element.style.transform = `translate(-50%, -50%) rotate(${targetRot}deg)`;
-                card.element.style.zIndex = Math.floor(Math.random() * 78);
-            }
-
-            // 累積洗牌度
-            washProgress += 0.25;
-            progressBar.style.width = `${Math.min(100, washProgress)}%`;
-
-            if (washProgress >= 100) {
-                finishWashing();
-            }
-        }
-
-        function endWashHand() {
-            isWashingActive = false;
-        }
-
-        // 洗牌完成，立刻自動隨機打亂數組，並決定正逆位
-        function finishWashing() {
-            state = 'washed';
-            isWashingActive = false;
-            progressContainer.style.display = 'none';
-            statusMsg.innerText = "洗牌完成！正在將 78 張牌平分為三疊...";
-
-            // Fisher-Yates 真正亂數打亂
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
-            }
-            // 隨機正逆位
-            deck.forEach(c => {
-                c.isReversed = Math.random() > 0.5;
-                if (c.isReversed) c.element.classList.add('reversed');
-            });
-
-            setTimeout(splitIntoThreePiles, 600);
-        }
-
-        // --- 2. 切牌：分成三疊 (保證78張完整厚度) ---
-        function splitIntoThreePiles() {
-            state = 'splitting';
-            
-            // 將 78 張均分：每疊 26 張
-            piles = [
-                deck.slice(0, 26),
-                deck.slice(26, 52),
-                deck.slice(52, 78)
-            ];
-
-            const targets = [22, 50, 78]; // 左、中、右 的百分比 X 座標
-
-            piles.forEach((pile, pileIdx) => {
-                pile.forEach((card, stackIdx) => {
-                    card.element.classList.remove('fast-move');
-                    // 呼叫 3D 厚度設定，每一疊有 26 張的高厚度視覺
-                    setCardStackPos(card.element, targets[pileIdx], 45, stackIdx, 0);
-                });
-            });
-
-            setTimeout(() => {
-                state = 'picking-piles';
-                statusMsg.innerText = "請「依序點選」這三疊，決定組合順序（先點的在最下方）。";
-                // 顯現觸發遮罩器
-                document.getElementById('pileLeft').style.display = 'block';
-                document.getElementById('pileCenter').style.display = 'block';
-                document.getElementById('pileRight').style.display = 'block';
-            }, 700);
-        }
-
-        // 客人點選某個牌疊
-        function choosePile(pileIdx) {
-            if (state !== 'picking-piles' || chosenPilesOrder.includes(pileIdx)) return;
-
-            chosenPilesOrder.push(pileIdx);
-            
-            // 更新點選標籤顯示順序
-            const labels = ['pileLeft', 'pileCenter', 'pileRight'];
-            const labelTexts = ['labelLeft', 'labelCenter', 'labelRight'];
-            const orderWords = ["【第 1 層：最底】", "【第 2 層：中間】", "【第 3 層：最頂】"];
-            document.getElementById(labelTexts[pileIdx]).innerText = orderWords[chosenPilesOrder.length - 1];
-            
-            // 動畫：被選中的牌疊立刻移動回畫面中央凝聚
-            // 計算 z-index 基數，最先選的 z-index 最低
-            const zIndexBase = (chosenPilesOrder.length - 1) * 26; 
-            
-            piles[pileIdx].forEach((card, stackIdx) => {
-                // 回到中間，堆疊順序加上基數，確保層級完美疊加
-                setCardStackPos(card.element, 50, 45, zIndexBase + stackIdx, 0);
-            });
-
-            // 三疊都選完了，開始重組
-            if (chosenPilesOrder.length === 3) {
-                state = 'combining';
-                // 隱藏遮罩
-                document.getElementById('pileLeft').style.display = 'none';
-                document.getElementById('pileCenter').style.display = 'none';
-                document.getElementById('pileRight').style.display = 'none';
-                
-                statusMsg.innerText = "牌組重新凝聚完畢。正在進行大扇形攤牌...";
-                
-                // 重新依照客人選擇的順序組合真正的 deck 陣列
-                deck = [
-                    ...piles[chosenPilesOrder[0]],
-                    ...piles[chosenPilesOrder[1]],
-                    ...piles[chosenPilesOrder[2]]
-                ];
-
-                setTimeout(fanAllCards, 1000);
-            }
-        }
-
-        // --- 3. 完美全展扇形 (78張完美均分) ---
-        function fanAllCards() {
-            state = 'fanned';
-            statusMsg.innerText = "✨ 78張牌能量佈滿 ✨ 請深呼吸，用你的直覺挑選其中一張。";
-
-            const totalCards = 78;
-            // 由於高達 78 張，張角必須拉大至 -115度 到 115度，視覺上才夠壯觀且不會過度重疊
-            const startAngle = -115;
-            const endAngle = 115;
-            const angleStep = (endAngle - startAngle) / (totalCards - 1);
-            
-            // 根據螢幕寬度自動調整半徑與高度，確保不爆框
-            const isMobile = window.innerWidth < 768;
-            const radius = isMobile ? 310 : 550; 
-            const topPos = isMobile ? 12 : 18;
-
-            deck.forEach((card, index) => {
-                const angle = startAngle + (index * angleStep);
-                
-                // 將旋轉中心投射到牌的下方遠處，形成華麗的塔羅大扇形
-                card.element.style.transformOrigin = `50% ${radius}px`;
-                card.element.style.top = `${topPos}%`;
-                card.element.style.left = `50%`;
-                
-                // 使用 CSS 變數鎖定角度，方便 hover 系統調用
-                card.element.style.setProperty('--angle', `${angle}deg`);
-                card.element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-                card.element.style.zIndex = index;
-                
-                // 允許懸停浮起
-                card.element.classList.add('hoverable');
-                
-                // 重新綁定專屬抽牌點擊事件 (避開之前的厚度計算)
-                card.element.onclick = () => drawThisCard(index);
-            });
-        }
-
-        // --- 4. 抽取命定之牌 ---
-        function drawThisCard(selectedIndex) {
-            if (state !== 'fanned') return;
-            state = 'finished';
-
-            const selectedCard = deck[selectedIndex];
-
-            // 讓沒中的牌淡出消失
-            deck.forEach((card, i) => {
-                card.element.classList.remove('hoverable');
-                if (i !== selectedIndex) {
-                    card.element.style.opacity = '0.1';
-                    card.element.style.pointerEvents = 'none';
-                }
-            });
-
-            // 中獎的牌回歸中央、重設旋轉軸心、華麗翻開放大
-            selectedCard.element.style.transformOrigin = 'center center';
-            selectedCard.element.style.left = '50%';
-            selectedCard.element.style.top = '45%';
-            selectedCard.element.classList.add('flipped');
-
-            statusMsg.innerText = "占卜完成，傾聽內心的聲音。";
-
-            // 展現結果
-            setTimeout(() => {
-                const orientation = selectedCard.isReversed ? '逆位' : '正位';
-                const color = selectedCard.isReversed ? '#ff6b6b' : '#51cf66';
-                
-                document.getElementById('resultText').innerHTML = `
-                    您抽到了：<strong>${selectedCard.name}</strong> <br>
-                    狀態：<span style="color: ${color}; font-weight: bold; font-size: 1.5rem;">${orientation}</span>
-                `;
-                document.getElementById('resultOverlay').classList.add('show');
-            }, 800);
-        }
-
-        // 啟動啟動！
-        init();
-    </script>
-</body>
-</html>
+            background: transparent; border:
