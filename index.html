@@ -24,7 +24,12 @@
             align-items: center;
             overflow: hidden;
             height: 100vh;
-            user-select: none;
+            user-select: none; /* 防止搓牌選取文字 */
+        }
+
+        /* 修正：強制讓設定選單元件可以被正常點選與操作 */
+        .setup-overlay, .setup-overlay *, .result-overlay, .result-overlay * {
+            user-select: auto !important;
         }
 
         /* 初始設定面板 */
@@ -45,7 +50,7 @@
             border-radius: 10px;
             box-shadow: 0 0 25px var(--gold-glow);
             text-align: center;
-            max-width: 400px;
+            max-width: 420px;
             width: 85%;
             color: #ffffff;
         }
@@ -62,9 +67,11 @@
             align-items: center;
             gap: 5px;
         }
-        .setup-item input[type="number"] {
-            width: 60px; padding: 6px; font-size: 1rem; text-align: center;
+        /* 下拉選單高級樣式 */
+        select {
+            padding: 6px 10px; font-size: 1rem;
             background: #222; color: var(--gold); border: 1px solid var(--gold); border-radius: 5px;
+            cursor: pointer; outline: none;
         }
         .setup-item input[type="checkbox"] {
             width: 18px; height: 18px; accent-color: var(--gold);
@@ -150,8 +157,9 @@
             display: flex; align-items: center; justify-content: center;
         }
 
+        /* 抽出的牌定位與放大 */
         .card.flipped {
-            transform: translate(-50%, -50%) rotate(0deg) scale(2.2) translateY(-10px) !important;
+            transform: translate(-50%, -50%) rotate(0deg) scale(2.0) !important;
             z-index: 999 !important;
         }
         .card.reversed .card-front-content { transform: rotate(180deg); }
@@ -165,7 +173,7 @@
             background: rgba(8, 4, 18, 0.98); border-top: 2px solid var(--gold);
             padding: 20px; box-sizing: border-box; text-align: center;
             transform: translateY(100%); transition: transform 0.5s ease-in-out;
-            z-index: 1000; max-height: 50vh; overflow-y: auto;
+            z-index: 1050; max-height: 45vh; overflow-y: auto;
         }
         .result-overlay.show { transform: translateY(0); }
         .result-text { font-size: 1.1rem; margin-bottom: 15px; text-align: left; max-width: 600px; margin: 0 auto 15px auto; line-height: 1.5; }
@@ -182,11 +190,13 @@
             .card-back::after { font-size: 2rem; }
             .card-front h3 { font-size: 0.8rem; }
             .card-front .suit-icon { font-size: 1.6rem; }
+            .card.flipped { transform: translate(-50%, -50%) rotate(0deg) scale(2.4) !important; }
         }
     </style>
 </head>
 <body>
 
+    <!-- 設定面板 -->
     <div class="setup-overlay" id="setupOverlay">
         <div class="setup-box">
             <h2>🔮 塔羅占卜設定儀式</h2>
@@ -197,3 +207,333 @@
                     <label for="optMajorOnly">僅大阿爾克那 (22張)</label>
                 </div>
             </div>
+            <div class="setup-item">
+                <label>正逆位設定：</label>
+                <div>
+                    <input type="checkbox" id="optUprightOnly"> 
+                    <label for="optUprightOnly">只出現正位</label>
+                </div>
+            </div>
+            <div class="setup-item">
+                <label>選擇抽牌張數：</label>
+                <select id="optDrawCount">
+                    <option value="1">1 張牌 (單張直覺占卜)</option>
+                    <option value="2">2 張牌 (二選一抉擇)</option>
+                    <option value="3" selected>3 張牌 (過去 / 現在 / 未來)</option>
+                    <option value="4">4 張牌 (問題核心與對策)</option>
+                    <option value="5">5 張牌 (經典大十字牌陣)</option>
+                </select>
+            </div>
+            <button onclick="startRitual()" style="margin-top: 20px; width: 100%;">進入占卜桌面</button>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>✨ 命運與直覺：高自訂互動塔羅 ✨</h1>
+        <div class="status-msg" id="statusMsg">請完成上方儀式設定。</div>
+        <div class="progress-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+
+    <div class="table-area" id="tableArea"></div>
+
+    <div class="result-overlay" id="resultOverlay">
+        <h2>占卜結果</h2>
+        <div class="result-text" id="resultText"></div>
+        <button onclick="window.location.reload()">重新設定與占卜</button>
+    </div>
+
+    <script>
+        const majorArcana = ["愚者", "魔術師", "女祭司", "女皇", "皇帝", "教皇", "戀人", "戰車", "力量", "隱士", "命運之輪", "正義", "倒吊人", "死神", "節制", "惡魔", "高塔", "星星", "月亮", "太陽", "審判", "世界"];
+        const suits = [{ name: "權杖", icon: "🔥" }, { name: "聖杯", icon: "💧" }, { name: "寶劍", icon: "⚔️" }, { name: "錢幣", icon: "🪙" }];
+        const minorValues = ["王牌", "二", "三", "四", "五", "六", "七", "八", "九", "十", "侍者", "騎士", "王后", "國王"];
+        
+        let tarotData = [];
+        let deck = [];
+        
+        let config = { majorOnly: false, uprightOnly: false, drawCount: 3 };
+        let state = 'setup'; 
+        let washProgress = 0, isWashingActive = false;
+        
+        let chosenPiles = [];
+        let drawnCards = [];
+
+        const tableArea = document.getElementById('tableArea');
+        const statusMsg = document.getElementById('statusMsg');
+
+        function startRitual() {
+            config.majorOnly = document.getElementById('optMajorOnly').checked;
+            config.uprightOnly = document.getElementById('optUprightOnly').checked;
+            config.drawCount = parseInt(document.getElementById('optDrawCount').value) || 3;
+            
+            // 如果選了大牌卻要抽5張以上，進行防呆
+            let maxCards = config.majorOnly ? 22 : 78;
+            if(config.drawCount > maxCards) config.drawCount = maxCards;
+
+            document.getElementById('setupOverlay').style.display = 'none';
+
+            tarotData = [];
+            majorArcana.forEach((name, i) => tarotData.push({ id: `maj-${i}`, name: name, icon: "🔮" }));
+            if (!config.majorOnly) {
+                suits.forEach(s => minorValues.forEach((v, i) => tarotData.push({ id: `min-${s.name}-${i}`, name: `${s.name}${v}`, icon: s.icon })));
+            }
+
+            initDeck();
+        }
+
+        function initDeck() {
+            tableArea.innerHTML = '';
+            deck = tarotData.map(card => ({ ...card, isReversed: false, element: null, pileId: 'main' }));
+            
+            deck.forEach((card, index) => {
+                const cardDiv = document.createElement('div');
+                cardDiv.className = 'card';
+                cardDiv.innerHTML = `
+                    <div class="card-face card-back"></div>
+                    <div class="card-face card-front">
+                        <div class="card-front-content"><div class="suit-icon">${card.icon}</div><h3>${card.name}</h3></div>
+                    </div>
+                `;
+                cardDiv.style.left = '50%'; cardDiv.style.top = '50%'; cardDiv.style.zIndex = index;
+                
+                // 修正：改用穩定的唯一識別碼 (card.id) 綁定點擊事件
+                cardDiv.onmousedown = () => handleCardClick(card.id);
+                cardDiv.ontouchstart = () => handleCardClick(card.id);
+                
+                card.element = cardDiv;
+                tableArea.appendChild(cardDiv);
+            });
+
+            state = 'washing';
+            statusMsg.innerText = "請在桌面上按住滑鼠或用手指「傳統雙手搓洗牌組」。";
+            document.getElementById('progressContainer').style.display = 'block';
+
+            tableArea.addEventListener('mousedown', startWashHand);
+            window.addEventListener('mousemove', moveWashHand);
+            window.addEventListener('mouseup', endWashHand);
+            tableArea.addEventListener('touchstart', startWashHand, {passive: true});
+            window.addEventListener('touchmove', moveWashHand, {passive: true});
+            window.addEventListener('touchend', endWashHand);
+        }
+
+        function startWashHand(e) { if (state === 'washing') isWashingActive = true; }
+        function endWashHand() { isWashingActive = false; }
+        function moveWashHand(e) {
+            if (!isWashingActive || state !== 'washing') return;
+            let clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            let clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            if (!clientX || !clientY) return;
+
+            const rect = tableArea.getBoundingClientRect();
+            const pX = ((clientX - rect.left) / rect.width) * 100;
+            const pY = ((clientY - rect.top) / rect.height) * 100;
+
+            for(let i=0; i< (config.majorOnly ? 4 : 12); i++) {
+                const randIndex = Math.floor(Math.random() * deck.length);
+                const c = deck[randIndex].element;
+                c.classList.add('fast-move');
+                c.style.left = `${Math.max(10, Math.min(90, pX + (Math.random()*34-17)))}%`;
+                c.style.top = `${Math.max(15, Math.min(85, pY + (Math.random()*34-17)))}%`;
+                c.style.transform = `translate(-50%, -50%) rotate(${Math.random()*360}deg)`;
+                c.style.zIndex = Math.floor(Math.random() * deck.length);
+            }
+
+            washProgress += (config.majorOnly ? 0.6 : 0.35);
+            document.getElementById('progressBar').style.width = `${Math.min(100, washProgress)}%`;
+
+            if (washProgress >= 100) finishWashing();
+        }
+
+        function finishWashing() {
+            state = 'washing-done';
+            isWashingActive = false;
+            document.getElementById('progressContainer').style.display = 'none';
+
+            // 隨機洗亂
+            for (let i = deck.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [deck[i], deck[j]] = [deck[j], deck[i]];
+            }
+            deck.forEach(c => {
+                if (!config.uprightOnly) {
+                    c.isReversed = Math.random() > 0.5;
+                    if (c.isReversed) c.element.classList.add('reversed');
+                }
+            });
+
+            statusMsg.innerText = "洗牌完成。請在中央牌組點選您要「切開」的位置 (第一次)。";
+            deck.forEach((card, i) => {
+                card.element.classList.remove('fast-move');
+                const offset = i * 1.5; 
+                card.element.style.left = `50%`;
+                card.element.style.top = `calc(65% - ${offset}px)`;
+                card.element.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+                card.element.style.zIndex = i;
+            });
+
+            setTimeout(() => { state = 'cutting-1'; }, 600);
+        }
+
+        // 核心點擊路由機制
+        function handleCardClick(cardId) {
+            if (state === 'cutting-1') executeCut1(cardId);
+            else if (state === 'cutting-2') executeCut2(cardId);
+            else if (state === 'picking-piles') pickPile(cardId);
+            else if (state === 'fanned') drawCard(cardId);
+        }
+
+        function executeCut1(cardId) {
+            const deckIndex = deck.findIndex(c => c.id === cardId);
+            if (deckIndex < 2 || deckIndex >= deck.length - 2) return; 
+
+            statusMsg.innerText = "已切出第一疊。請在剩下的牌疊上再點選一次位置 (第二次)。";
+            state = 'cutting-2';
+
+            // 將切開的上半部移至左邊
+            for (let i = deckIndex; i < deck.length; i++) {
+                deck[i].pileId = 'left';
+                deck[i].element.style.left = '20%';
+            }
+        }
+
+        function executeCut2(cardId) {
+            const deckIndex = deck.findIndex(c => c.id === cardId);
+            const clickedCard = deck[deckIndex];
+
+            if (clickedCard.pileId !== 'main') return;
+            if (deckIndex < 1) return;
+
+            statusMsg.innerText = "切牌完成！請依序點選左、中、右這三疊牌，決定重新組合的疊加順序。";
+            state = 'picking-piles';
+
+            // 第二次切開：剩餘的主疊再切出一半移至中央，底層留在右邊
+            deck.forEach(c => {
+                if (c.pileId === 'main') {
+                    const cIndex = deck.indexOf(c);
+                    if (cIndex >= deckIndex) {
+                        c.pileId = 'center';
+                        c.element.style.left = '50%';
+                    } else {
+                        c.pileId = 'right';
+                        c.element.style.left = '80%';
+                    }
+                }
+            });
+
+            // 幫所有牌加上發光特效提示
+            deck.forEach(c => c.element.classList.add('pile-hoverable'));
+        }
+
+        function pickPile(cardId) {
+            const deckIndex = deck.findIndex(c => c.id === cardId);
+            const pileId = deck[deckIndex].pileId;
+
+            if (chosenPiles.includes(pileId)) return;
+
+            chosenPiles.push(pileId);
+            const baseZIndex = chosenPiles.length * 100;
+
+            // 被點選的牌疊滑行回中央凝聚
+            deck.forEach((c) => {
+                if (c.pileId === pileId) {
+                    const cIndex = deck.indexOf(c);
+                    c.element.classList.remove('pile-hoverable');
+                    c.element.style.left = '50%';
+                    c.element.style.top = `calc(50% - ${cIndex * 1.5}px)`;
+                    c.element.style.zIndex = baseZIndex + cIndex;
+                }
+            });
+
+            if (chosenPiles.length === 3) {
+                state = 'combining';
+                statusMsg.innerText = "牌組重新凝聚，正在為您展開華麗扇形牌陣...";
+                
+                let newDeck = [];
+                chosenPiles.forEach(pid => {
+                    newDeck = newDeck.concat(deck.filter(c => c.pileId === pid));
+                });
+                deck = newDeck;
+
+                setTimeout(fanAllCards, 1200);
+            }
+        }
+
+        function fanAllCards() {
+            state = 'fanned';
+            statusMsg.innerText = ` 請憑第一直覺抽出 ${config.drawCount} 張牌 (目前已抽: 0/${config.drawCount})。`;
+
+            const totalCards = deck.length;
+            const startAngle = -110; const endAngle = 110;
+            const angleStep = (endAngle - startAngle) / (totalCards - 1 || 1);
+            
+            const isMobile = window.innerWidth < 768;
+            const radius = isMobile ? 320 : 580; 
+            const topPos = isMobile ? 15 : 22;
+
+            deck.forEach((card, index) => {
+                const angle = startAngle + (index * angleStep);
+                card.element.style.transformOrigin = `50% ${radius}px`;
+                card.element.style.top = `${topPos}%`;
+                card.element.style.left = `50%`;
+                card.element.style.setProperty('--angle', `${angle}deg`);
+                card.element.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+                card.element.style.zIndex = index;
+                card.element.classList.add('hoverable');
+            });
+        }
+
+        function drawCard(cardId) {
+            if (state !== 'fanned') return;
+            const deckIndex = deck.findIndex(c => c.id === cardId);
+            const selectedCard = deck[deckIndex];
+
+            if (drawnCards.includes(selectedCard)) return;
+
+            drawnCards.push(selectedCard);
+            statusMsg.innerText = `已抽出 ${drawnCards.length}/${config.drawCount} 張牌。`;
+
+            selectedCard.element.classList.remove('hoverable');
+            selectedCard.element.style.transformOrigin = 'center center';
+            
+            // 使用「百分比」響應式定位，確保各種螢幕都能整齊並排顯示
+            const drawX = (100 / (config.drawCount + 1)) * drawnCards.length;
+            
+            selectedCard.element.style.left = `${drawX}%`;
+            selectedCard.element.style.top = '32%';
+            selectedCard.element.classList.add('flipped');
+
+            // 達到設定張數，結束占卜
+            if (drawnCards.length >= config.drawCount) {
+                state = 'finished';
+                
+                // 沒被抽中的牌全部淡出，凸顯結果
+                deck.forEach(c => {
+                    if (!drawnCards.includes(c)) {
+                        c.element.style.opacity = '0.08';
+                        c.element.style.pointerEvents = 'none';
+                        c.element.classList.remove('hoverable');
+                    }
+                });
+
+                setTimeout(showResultOverlay, 1000);
+            }
+        }
+
+        function showResultOverlay() {
+            statusMsg.innerText = "抽牌完成。";
+            let html = "";
+            drawnCards.forEach((card, idx) => {
+                const orientation = card.isReversed ? '逆位' : '正位';
+                const color = card.isReversed ? '#ff6b6b' : '#51cf66';
+                html += `
+                    <div class="result-item">
+                        <strong>第 ${idx + 1} 張：${card.name}</strong> 
+                        <span style="color: ${color}; margin-left:15px; font-weight:bold;">[ ${orientation} ]</span>
+                    </div>
+                `;
+            });
+            document.getElementById('resultText').innerHTML = html;
+            document.getElementById('resultOverlay').classList.add('show');
+        }
+    </script>
+</body>
+</html>
